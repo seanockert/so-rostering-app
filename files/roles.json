@@ -1,0 +1,16 @@
+[{
+    "background_colour": "#f38f60",
+    "name": "Afternoon",
+    "id": 2,
+    "text_colour": "#000000"
+}, {
+    "background_colour": "#f5ffa2",
+    "name": "Morning",
+    "id": 1,
+    "text_colour": "#000000"
+}, {
+    "background_colour": "#bf8ef1",
+    "name": "Night",
+    "id": 3,
+    "text_colour": "#000000"
+}]

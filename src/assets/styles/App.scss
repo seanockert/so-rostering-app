@@ -1,0 +1,296 @@
+$base-padding: 0.75em;
+
+.grid {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.grid > * {
+	flex: 1 0 2em;
+}
+
+h2 {
+	strong {
+		color: blue;
+	}
+}
+
+.roster-header {
+	strong {
+		&::first-letter {
+			text-transform: uppercase;
+		}
+	}
+}
+
+.roster-legend {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+
+	li {
+		display: inline-block;
+		width: 100px;
+		padding: $base-padding;
+		font-size: 0.875em;
+		text-align: center;
+
+		&:first-child {
+			text-align: right;
+			width: auto;
+			padding-left: 0;
+		}
+
+		&:nth-child(2) {
+			border-radius: 6px 0 0 6px;
+		}
+
+		&:last-child {
+			border-radius: 0 6px 6px 0;
+		}
+	}
+}
+
+.table-wrap {
+	overflow-x: scroll;
+}
+
+.roster-table {
+	width: 100%;
+	margin-top: 1.5em;
+	border-collapse: collapse;
+	border-spacing: 0;
+	margin-bottom: 3em;
+
+	thead {
+		th {
+			background-color: #f7f7f7;
+			border-bottom: 2px solid #ddd;
+			padding: $base-padding;
+			text-transform: uppercase;
+			font-weight: normal;
+
+			&:first-child {
+				text-align: left;
+			}
+
+			&.today {
+				background-color: yellow;
+			}
+
+			small {
+				display: block;
+				color: #767676;
+				white-space: nowrap;
+			}
+		}
+	}
+
+	tbody {
+		text-align: left;
+
+		tr {
+			transition: all 0.15s ease-out;
+
+			&:last-child {
+				td {
+					border-bottom: none;
+				}
+			}
+		}
+	}
+
+	td {
+		width: 12.5%;
+		padding: $base-padding;
+		vertical-align: top;
+		border-bottom: 1px solid #ddd;
+
+		&:first-child {
+			min-width: 160px;
+		}
+
+		h4 {
+			margin: 0 0 $base-padding/2 0;
+		}
+
+		> a {
+			padding: $base-padding;
+			margin: $base-padding/4 0;
+			min-width: 6em;
+			position: relative;
+			min-height: 3em;
+			height: 100%;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+			&:hover {
+				box-shadow: 0 7px 14px rgba(0, 0, 0, 0.25),
+					0 5px 5px rgba(0, 0, 0, 0.22);
+			}
+
+			time {
+				white-space: nowrap;
+				margin: 0 $base-padding/2;
+			}
+
+			&:first-child {
+				margin-top: 0;
+				border-radius: 6px 6px 0 0;
+			}
+
+			&:last-child {
+				border-radius: 0 0 6px 6px;
+			}
+
+			&:only-child {
+				margin: 0;
+				border-radius: 6px;
+			}
+
+			&.prevDay {
+				background-image: linear-gradient(
+						135deg,
+						white 50%,
+						rgba(255, 255, 255, 0) 50%
+					),
+					linear-gradient(-135deg, white 50%, rgba(255, 255, 255, 0) 50%);
+				background-position: top center, top center;
+				background-size: 0.75rem 0.75rem, 0.75rem 0.75rem;
+				background-repeat: repeat-x;
+				padding-top: 1.5em;
+			}
+
+			&.nextDay {
+				padding-bottom: 1.5em;
+				background-image: linear-gradient(
+						45deg,
+						white 50%,
+						rgba(255, 255, 255, 0) 50%
+					),
+					linear-gradient(-45deg, white 50%, rgba(255, 255, 255, 0) 50%);
+				background-position: bottom center, bottom center;
+				background-size: 0.75rem 0.75rem, 0.75rem 0.75rem;
+				background-repeat: repeat-x;
+			}
+		}
+	}
+}
+
+.roster-timetable {
+	h3 {
+		text-align: center;
+		border-bottom: 2px solid #ddd;
+		padding: $base-padding;
+		text-transform: uppercase;
+		font-weight: normal;
+
+		small {
+			display: block;
+		}
+	}
+
+	ol {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	li {
+		height: 3em;
+		display: flex;
+		align-items: center;
+		padding: $base-padding;
+		border-bottom: 1px solid #eee;
+		border-radius: 6px;
+		margin: 0 $base-padding/2;
+
+		div {
+			text-align: center;
+		}
+
+		&.empty {
+			border: none;
+		}
+
+		&.block {
+			background: #eee;
+			height: 18em;
+			border-radius: 6px;
+		}
+	}
+
+	time {
+		white-space: nowrap;
+		margin: 0 $base-padding/2;
+	}
+}
+
+.roster-edit {
+	div {
+		margin-bottom: $base-padding;
+	}
+
+	label {
+		display: block;
+		font-weight: bold;
+		margin-bottom: $base-padding/2;
+
+		small {
+			font-weight: normal;
+			float: right;
+		}
+	}
+
+	input {
+		font-size: 1em;
+		font-family: sans-serif;
+		padding: $base-padding;
+		width: 100%;
+	}
+}
+
+/* For editing modal */
+.modal-window {
+	position: fixed;
+	background-color: rgba(0, 0, 0, 0.3);
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 999;
+	opacity: 0;
+	pointer-events: none;
+	transition: all 0.3s;
+}
+
+.modal-window:target {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.modal-window > div {
+	min-width: 320px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	padding: 1.5em;
+	background: #fff;
+	box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.modal-close {
+	color: #fff;
+	padding: $base-padding;
+	padding-left: 1.5em;
+	background: red;
+	border-radius: 0 0 0 2em;
+	text-decoration: none;
+	position: absolute;
+	top: 0;
+	right: 0;
+}

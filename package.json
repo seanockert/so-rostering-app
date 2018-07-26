@@ -1,0 +1,21 @@
+{
+  "name": "rostering-app",
+  "version": "0.1.0",
+  "author": "Sean Ockert",
+  "private": true,
+  "dependencies": {
+    "moment-timezone": "^0.5.21",
+    "node-sass-chokidar": "^1.3.3",
+    "react": "^16.4.1",
+    "react-dom": "^16.4.1",
+    "react-moment": "^0.7.9",
+    "react-scripts": "1.1.4"
+  },
+  "scripts": {
+    "build-css": "node-sass-chokidar src/ -o src/",
+    "watch-css": "npm run build-css && node-sass-chokidar src/assets/styles/ -o src/assets/styles/ --watch --recursive",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom"
+  }
+}
