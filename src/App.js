@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import './assets/styles/App.css';
+
+// Load some utility functions
 import {
   convertDatesToTimestamp,
   compareDates,
@@ -7,11 +9,12 @@ import {
   countHours
 } from './lib/utils';
 
+// For time manipulation
 import Moment from 'react-moment';
 import moment from 'moment';
 import 'moment-timezone';
 
-// Gets updated in render
+// Gets updated in render from the config, so can set any timezone as default here
 Moment.globalTimezone = 'Australia/Perth';
 //Moment.globalTimezone = 'Europe/London';
 
@@ -65,7 +68,7 @@ class App extends Component {
         Roster
           - Employee
             - Day of the week
-              - Shift IDs
+              - Shift IDs (styled with role)
 
         TODO: Move this out of componentDidMount to its own function
         */
@@ -510,6 +513,8 @@ class EmployeeTimetableDay extends React.Component {
         return role.id === shift.role_id;
       })[0];
 
+
+      // Bug: these aren't being offset correctly. Change to duration in minutes to capture half hours
       const startTime = shift.start_time.tz(this.props.timezone);
       const endTime = shift.end_time.tz(this.props.timezone);
       let timeFormat = 'h:mma';
@@ -517,10 +522,7 @@ class EmployeeTimetableDay extends React.Component {
       const offset = startTime.format('H');
       let duration = endTime.format('H') - startTime.format('H');
 
-      console.log(startTime)
-      const offset2 = moment.duration((startTime.startOf('day')).diff(startTime)).asMinutes();
-      //console.log(startTime.startOf('day'))
-      //console.log(offset2)
+      //const offset = moment.duration((startTime.startOf('day')).diff(startTime)).asMinutes();
       //const nextDay = (endTime.format('H') - startTime.format('H') > 0) ? true : false;
       //let duration = moment.duration(endTime.diff(startTime)).asMinutes();
 
@@ -561,6 +563,5 @@ class EmployeeTimetableDay extends React.Component {
     );
   }
 }
-
 
 export default App;
