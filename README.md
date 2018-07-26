@@ -1,4 +1,5 @@
-# Biarri - Front End Dev Challenge
+# Rostering App
+### Biarri - Front End Dev Challenge
 
 ## Demo
 
