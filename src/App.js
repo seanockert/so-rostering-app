@@ -9,6 +9,8 @@ import {
   countHours
 } from './lib/utils';
 
+import ff from './lib/friendlyFire';
+
 // For time manipulation
 import Moment from 'react-moment';
 import moment from 'moment';
@@ -32,11 +34,9 @@ class App extends Component {
       roles: {},
       shifts: {},
       roster: [],
-      thisWeek: [],
-      editingId: 61574
+      thisWeek: []
     };
 
-    this.updateEditingId = this.updateEditingId.bind(this);
     this.updateShiftTime = this.updateShiftTime.bind(this);
   }
 
@@ -115,13 +115,6 @@ class App extends Component {
       });
   }
 
-  // Change the current shift ID when. Trigger: a shift is clicked
-  updateEditingId(id) {
-    this.setState({
-      editingId: id
-    });
-  }
-
   // Change the start or end time of a shift. Trigger: a shift time is changed
   updateShiftTime(shifts) {
     this.setState({
@@ -146,6 +139,7 @@ class App extends Component {
   }
 
   render() {
+    // Display loading until data is populated
     if (!this.state.config.location) {
       return <div className="loading">Loading...</div>;
     }
@@ -181,7 +175,6 @@ class App extends Component {
           employee={employee}
           shifts={this.state.shifts}
           roles={this.state.roles}
-          editingId={this.updateEditingId}
         />
       </React.Fragment>
     ));
@@ -207,11 +200,9 @@ class App extends Component {
         <header className="roster-header">
           <h1>Roster for {this.state.config.location}</h1>
           <p>
-            All shifts are in{' '}
-            <strong>{this.state.config.timezone.split('/')[1]}</strong> time ({
+            All shifts are in <strong>{this.state.config.timezone.split('/')[1]}</strong> time ({
               this.state.config.timezone.split('/')[0]
-            }{' '}
-            GMT<Moment format="Z">{currentTime}</Moment>)
+            } GMT<Moment format="Z">{currentTime}</Moment>)
           </p>
         </header>
 
@@ -246,11 +237,7 @@ class App extends Component {
               Close
             </a>
             <EmployeeEditShift
-              shiftId={this.state.editingId}
               shifts={this.state.shifts}
-              shiftIndex={this.state.shifts.findIndex(
-                x => x.id === this.state.editingId
-              )}
               timezone={this.state.config.timezone}
               updateShift={this.updateShiftTime}
             />
@@ -261,109 +248,110 @@ class App extends Component {
   }
 }
 
-class EmployeeRow extends React.Component {
-  render() {
-    const employeeDays = this.props.employee.days.map((day, i) => (
-      <React.Fragment key={day.date + '-' + i}>
-        <EmployeeDay
-          day={day}
-          shifts={this.props.shifts}
-          roles={this.props.roles}
-          id={this.props.employee.id}
-          updateShiftType={this.updateShiftType}
-          editingId={(id) => this.props.editingId(id)}
-        />
-      </React.Fragment>
-    ));
+const EmployeeRow = (props) => {
+  const { employee, shifts, roles } = props;
 
-    return (
-      <tr>
-        <td>
-          <h4>
-            {this.props.employee.first_name} {this.props.employee.last_name}
-          </h4>
-          <small>
-            {countShifts(this.props.employee.days)} shifts ({countHours(
-              this.props.employee.days,
-              this.props.shifts
-            )})
-          </small>
-        </td>
-        {employeeDays}
-      </tr>
-    );
-  }
+  const employeeDays = employee.days.map((day, i) => (
+    <React.Fragment key={day.date + '-' + i}>
+      <EmployeeDay
+        day={day}
+        shifts={shifts}
+        roles={roles}
+      />
+    </React.Fragment>
+  ));
+
+  return (
+    <tr>
+      <td>
+        <h4>
+          {employee.first_name} {employee.last_name}
+        </h4>
+        <small>
+          {countShifts(employee.days)} shifts ({countHours(
+            employee.days,
+            shifts
+          )})
+        </small>
+      </td>
+      {employeeDays}
+    </tr>
+  );
 }
 
-class EmployeeDay extends React.Component {
-  render() {
-    const shiftList = this.props.day.shifts.map((shiftId, i) => {
-      const shift = this.props.shifts.filter(shift => {
-        return shift.id === shiftId;
-      })[0];
+const EmployeeDay = (props) => {
+  const { day, shifts, roles } = props;
 
-      // Get the role for styles and class name
-      const role = this.props.roles.filter(role => {
-        return role.id === shift.role_id;
-      })[0];
+  const shiftList = day.shifts.map((shiftId, i) => {
+    const shift = shifts.filter(shift => {
+      return shift.id === shiftId;
+    })[0];
 
-      const style = {
-        backgroundColor: role.background_colour,
-        color: role.text_colour
-      };
+    // Get the role for styles and class name
+    const role = roles.filter(role => {
+      return role.id === shift.role_id;
+    })[0];
 
-      // TODO: If shift runs onto next day, display shift on next day too
-      let shiftType = '';
-      if (
-        shift.end_time.format('YYYY-MM-DD') >
-        shift.start_time.format('YYYY-MM-DD')
-      ) {
-        // Shifts that start today and end tomorrow
-        shiftType = 'nextDay';
-      }
+    const style = {
+      backgroundColor: role.background_colour,
+      color: role.text_colour
+    };
 
-      return (
-        <React.Fragment key={shift.id}>
-          <EmployeeShift
-            shift={shift}
-            shiftType={shiftType}
-            style={style}
-            role={role}
-            onClick={() => this.props.editingId(shift.id)}
-          />
-        </React.Fragment>
-      );
-    });
+    // TODO: If shift runs onto next day, display shift on next day too
+    let shiftType = '';
+    if (
+      shift.end_time.format('YYYY-MM-DD') >
+      shift.start_time.format('YYYY-MM-DD')
+    ) {
+      // Shifts that start today and end tomorrow
+      shiftType = 'nextDay';
+    }
 
-    return <td>{shiftList}</td>;
-  }
+    return (
+      <React.Fragment key={shift.id}>
+        <EmployeeShift
+          shift={shift}
+          shiftType={shiftType}
+          style={style}
+          role={role}
+        />
+      </React.Fragment>
+    );
+  });
+
+  return <td>{shiftList}</td>;
 }
 
 class EmployeeShift extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      startFormat: this.props.shiftType === 'prevDay' ? 'h:mma (ddd)' : 'h:mma',
-      endFormat: this.props.shiftType === 'nextDay' ? 'h:mma (ddd)' : 'h:mma'
-    };
+  componentDidMount() {
+    ff.init(this); // Register with FriendlyFire to make trigger(…) method available
+  }
+
+  // Send ID to the EmployeeEditShift component
+  handleClick(id) {
+    this.trigger('click', id);
   }
 
   render() {
-    // TODO: Replace onClick with an event dispatch to pass ID to editing component directly. Simplify passing up to parents
+    const { shift, shiftType, style, role } = this.props;
+
+    const startFormat = shiftType === 'prevDay' ? 'h:mma (ddd)' : 'h:mma';
+    const endFormat = shiftType === 'nextDay' ? 'h:mma (ddd)' : 'h:mma';
+
     return (
       <a
         href="#open-modal"
         title="Edit shift times"
-        style={this.props.style}
-        className={this.props.shiftType + ' role-' + this.props.role.id}
-        onClick={() => this.props.onClick()}
+        style={style}
+        className={shiftType + ' role-' + role.id}
+        onClick={() => this.handleClick(shift.id)}
       >
-        <Moment format={this.state.startFormat}>
-          {this.props.shift.start_time}
-        </Moment>{' '}
+        <Moment format={startFormat}>
+          {shift.start_time}
+        </Moment>
         -
-        <Moment format={this.state.endFormat}>
-          {this.props.shift.end_time}
+        <Moment format={endFormat}>
+          {shift.end_time}
         </Moment>
       </a>
     );
@@ -373,15 +361,22 @@ class EmployeeShift extends React.Component {
 class EmployeeEditShift extends React.Component {
   constructor(props) {
     super(props);
+    this.state = {
+      shiftIndex: 0
+    }
 
     this.changeStartTime = this.changeStartTime.bind(this);
     this.changeEndTime = this.changeEndTime.bind(this);
   }
 
+  componentDidMount() {
+    ff.init(this); // Register with FriendlyFire to have subscribers registered
+  }
+
   // Update time on input change
   changeStartTime(e) {
     const time = moment(e.target.value, 'hh:mm');
-    let newShift = Object.assign({}, this.props.shifts[this.props.shiftIndex]);
+    let newShift = Object.assign({}, this.props.shifts[this.state.shiftIndex]);
     newShift.start_time.set({ h: time.get('hour'), m: time.get('minute') });
 
     this.handleChange(newShift);
@@ -389,7 +384,7 @@ class EmployeeEditShift extends React.Component {
 
   changeEndTime(e) {
     const time = moment(e.target.value, 'hh:mm');
-    let newShift = Object.assign({}, this.props.shifts[this.props.shiftIndex]);
+    let newShift = Object.assign({}, this.props.shifts[this.state.shiftIndex]);
     newShift.end_time.set({ h: time.get('hour'), m: time.get('minute') });
 
     this.handleChange(newShift);
@@ -401,18 +396,31 @@ class EmployeeEditShift extends React.Component {
     this.props.updateShift(newShifts);
   }
 
+  // Trigger from EmployeeShift by Friendly fire
+  onEmployeeShiftClick(id) {
+    const shiftIndex = this.props.shifts.findIndex( x => x.id === id)
+    this.setState({ shiftIndex: shiftIndex });
+  }
+
   render() {
-    const shift = this.props.shifts[this.props.shiftIndex];
+    // Display loading until data is populated
+    if (!this.state.shiftIndex) {
+      return <div>Missing ID</div>;
+    }
+
+    const { shifts, timezone } = this.props;
+
+    const shift = shifts[this.state.shiftIndex];
 
     // Set the timezone from parent
-    const startTime = shift.start_time.tz(this.props.timezone);
-    const endTime = shift.end_time.tz(this.props.timezone);
+    const startTime = shift.start_time.tz(timezone);
+    const endTime = shift.end_time.tz(timezone);
 
     return (
       <div className="roster-edit">
-        <h3>Edit shift #{this.props.shiftId}</h3>
+        <h3>Edit shift #{shift.id}</h3>
         <div>
-          <label for="start_time">
+          <label htmlFor="start_time">
             Start time <small>{startTime.format('h:mma')}</small>
           </label>
           <input
@@ -425,7 +433,7 @@ class EmployeeEditShift extends React.Component {
           />
         </div>
         <div>
-          <label for="end_time">
+          <label htmlFor="end_time">
             End time <small>{endTime.format('h:mma')}</small>
           </label>
           <input
@@ -444,124 +452,123 @@ class EmployeeEditShift extends React.Component {
 
 // A second visualisation - show shifts by hours for each employee
 // TODO: select box to pick and change employee
-class EmployeeTimetable extends React.Component {
-  render() {
-    const dayBlock = this.props.employee.days.map((day, index) => (
-      <div key={day.date}>
-        <h3>
-          <Moment format="ddd">{day.date}</Moment>
-        </h3>
-        <ol>
-        <React.Fragment>
-          <EmployeeTimetableDay todayShifts={day.shifts} shifts={this.props.shifts} roles={this.props.roles} timezone={this.props.timezone} />
-        </React.Fragment>
-        </ol>
-      </div>
-    ));
+const EmployeeTimetable = (props) => {
+  const { employee, shifts, roles, timezone } = props;
 
-    return (
-      <div className="timetable">
-        <h2>Daily roster for <strong>{this.props.employee.first_name + ' ' + this.props.employee.last_name}</strong></h2>
-        <div className="grid roster-timetable">
-          <div>
-            <h3>Time</h3>
-            <ol>
-              <li>12am - 1am</li>
-              <li>1am - 2am</li>
-              <li>2am - 3am</li>
-              <li>3am - 4am</li>
-              <li>4am - 5am</li>
-              <li>5am - 6am</li>
-              <li>6am - 7am</li>
-              <li>7am - 8am</li>
-              <li>8am - 9am</li>
-              <li>9am - 10am</li>
-              <li>10am - 11am</li>
-              <li>11am - 12pm</li>
-              <li>12pm - 1pm</li>
-              <li>1pm - 2pm</li>
-              <li>2pm - 3pm</li>
-              <li>3pm - 4pm</li>
-              <li>4pm - 5pm</li>
-              <li>5pm - 6pm</li>
-              <li>6pm - 7pm</li>
-              <li>7pm - 8pm</li>
-              <li>8pm - 9pm</li>
-              <li>9pm - 10pm</li>
-              <li>9pm - 11pm</li>
-              <li>10pm - 11pm</li>
-              <li>11pm - 12am</li>
-            </ol>
-          </div>
-          {dayBlock} 
+  const dayBlock = employee.days.map((day, index) => (
+    <div key={day.date}>
+      <h3>
+        <Moment format="ddd">{day.date}</Moment>
+      </h3>
+      <ol>
+      <React.Fragment>
+        <EmployeeTimetableDay todayShifts={day.shifts} shifts={shifts} roles={roles} timezone={timezone} />
+      </React.Fragment>
+      </ol>
+    </div>
+  ));
+
+  return (
+    <div className="timetable">
+      <h2>Daily roster for <strong>{employee.first_name + ' ' + employee.last_name}</strong></h2>
+      <div className="grid roster-timetable">
+        <div>
+          <h3>Time</h3>
+          <ol>
+            <li>12am - 1am</li>
+            <li>1am - 2am</li>
+            <li>2am - 3am</li>
+            <li>3am - 4am</li>
+            <li>4am - 5am</li>
+            <li>5am - 6am</li>
+            <li>6am - 7am</li>
+            <li>7am - 8am</li>
+            <li>8am - 9am</li>
+            <li>9am - 10am</li>
+            <li>10am - 11am</li>
+            <li>11am - 12pm</li>
+            <li>12pm - 1pm</li>
+            <li>1pm - 2pm</li>
+            <li>2pm - 3pm</li>
+            <li>3pm - 4pm</li>
+            <li>4pm - 5pm</li>
+            <li>5pm - 6pm</li>
+            <li>6pm - 7pm</li>
+            <li>7pm - 8pm</li>
+            <li>8pm - 9pm</li>
+            <li>9pm - 10pm</li>
+            <li>9pm - 11pm</li>
+            <li>10pm - 11pm</li>
+            <li>11pm - 12am</li>
+          </ol>
         </div>
+        {dayBlock} 
       </div>
-    );
-  }
+    </div>
+  );
 }
 
-class EmployeeTimetableDay extends React.Component {
-  render() {
-    const timeBlock = this.props.todayShifts.map((shiftId, i) => {
+const EmployeeTimetableDay = (props) => {
+  const { todayShifts, shifts, roles, timezone } = props;
 
-      const shift = this.props.shifts.filter(shift => {
-        return shift.id === shiftId;
-      })[0];
+  const timeBlock = todayShifts.map((shiftId, i) => {
 
-      // Get the role for styles and class name
-      const role = this.props.roles.filter(role => {
-        return role.id === shift.role_id;
-      })[0];
+    const shift = shifts.filter(shift => {
+      return shift.id === shiftId;
+    })[0];
 
+    // Get the role for styles and class name
+    const role = roles.filter(role => {
+      return role.id === shift.role_id;
+    })[0];
 
-      // Bug: these aren't being offset correctly. Change to duration in minutes to capture half hours
-      const startTime = shift.start_time.tz(this.props.timezone);
-      const endTime = shift.end_time.tz(this.props.timezone);
-      let timeFormat = 'h:mma';
+    // Bug: these aren't being offset correctly. Change to duration in minutes to capture half hours
+    const startTime = shift.start_time.tz(timezone);
+    const endTime = shift.end_time.tz(timezone);
+    let timeFormat = 'h:mma';
 
-      const offset = startTime.format('H');
-      let duration = endTime.format('H') - startTime.format('H');
+    const offset = startTime.format('H');
+    let duration = endTime.format('H') - startTime.format('H');
 
-      //const offset = moment.duration((startTime.startOf('day')).diff(startTime)).asMinutes();
-      //const nextDay = (endTime.format('H') - startTime.format('H') > 0) ? true : false;
-      //let duration = moment.duration(endTime.diff(startTime)).asMinutes();
+    //const offset = moment.duration((startTime.startOf('day')).diff(startTime)).asMinutes();
+    //const nextDay = (endTime.format('H') - startTime.format('H') > 0) ? true : false;
+    //let duration = moment.duration(endTime.diff(startTime)).asMinutes();
 
-      // Ends next day to extend to midnight
-      if (duration < 0) {
-        duration = 25 - offset;
-        timeFormat = 'h:mma \(ddd\)';
-      }
+    // Ends next day to extend to midnight
+    if (duration < 0) {
+      duration = 25 - offset;
+      timeFormat = 'h:mma (ddd)';
+    }
 
-      const style = {
-        backgroundColor: role.background_colour,
-        color: role.text_colour,
-        marginTop: (offset * 3) + 'em',
-        height: (duration * 3) + 'em',
-      };
-
-      return (
-        <React.Fragment key={shift.id}>
-          <li style={style}>
-            <div>
-              <Moment format={timeFormat}>
-              {startTime}
-            </Moment>{' '}
-            -{' '}
-            <Moment format={timeFormat}>
-              {endTime}
-            </Moment>
-            </div>
-        </li>
-        </React.Fragment>
-      );
-    });    
+    const style = {
+      backgroundColor: role.background_colour,
+      color: role.text_colour,
+      marginTop: (offset * 3) + 'em',
+      height: (duration * 3) + 'em',
+    };
 
     return (
-      <React.Fragment>
-      {timeBlock}
+      <React.Fragment key={shift.id}>
+        <li style={style}>
+          <div>
+            <Moment format={timeFormat}>
+            {startTime}
+          </Moment>{' '}
+          -{' '}
+          <Moment format={timeFormat}>
+            {endTime}
+          </Moment>
+          </div>
+      </li>
       </React.Fragment>
     );
-  }
+  });    
+
+  return (
+    <React.Fragment>
+    {timeBlock}
+    </React.Fragment>
+  );
 }
 
 export default App;
