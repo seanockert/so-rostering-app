@@ -12,18 +12,25 @@ import {
 import ff from './lib/friendlyFire';
 
 // For time manipulation
-import Moment from 'react-moment';
 import moment from 'moment';
 import 'moment-timezone';
 
-// Gets updated in render from the config, so can set any timezone as default here
-Moment.globalTimezone = 'Australia/Perth';
-//Moment.globalTimezone = 'Europe/London';
-
 // Connecting to JSONstore as an endpoint. Alternatively, remove the fetch and get the data from a local file:
-// import data from './roster.json';
-const dataEndpoint =
-  'https://www.jsonstore.io/e03b22da584e6023a95f3deb34b6adecf94b586f2a7735c6c44d3f500ccaae7e'; // Backup: https://www.jsonstore.io/3e58826123188f9af683971e8bb335355df8725f7237159bd41c060ee76d4dc5
+//import localData from './files/localData.json';
+const dataEndpoint = 'https://www.jsonstore.io/4a5558704da6c0950f2183e603158ef8193fb1d0e051c2a6beb53a8693d2eef9';
+/* Prefill data
+  fetch(dataEndpoint, {
+    headers: {
+      'Content-type': 'application/json'
+    },
+    method: 'POST',
+    body: JSON.stringify(localData)
+  })
+  .then(response => response.json())
+  .then(data => {
+
+  }); 
+*/
 
 class App extends Component {
   constructor(props) {
@@ -48,6 +55,7 @@ class App extends Component {
     })
       .then(response => response.json())
       .then(data => {
+        console.log(data)
         // Parse dates and order shifts by their start date
         let orderedShifts = convertDatesToTimestamp(data.result.shifts);
         orderedShifts.sort(compareDates);
@@ -74,14 +82,17 @@ class App extends Component {
         */
 
         let roster = [];
+        let carryOverShift = null;
         for (let i = 0; i < data.result.employees.length; i++) {
           let employee = data.result.employees[i];
           employee.days = [];
+          
 
           for (let j = 0; j < thisWeek.length; j++) {
             let day = [];
             day.date = thisWeek[j]; // Set the day's date
             day.shifts = []; // Store shifts here
+            day.carryOverShifts = []; // Store shifts that carry over from previous day here
 
             for (let k = 0; k < orderedShifts.length; k++) {
               let shift = orderedShifts[k];
@@ -89,12 +100,23 @@ class App extends Component {
               // Shift belongs to employee and is scheduled today
               if (
                 employee.id === shift.employee_id &&
-                shift.start_time.format('YYYY-MM-DD') ===
-                  day.date.format('YYYY-MM-DD')
+                shift.start_time.get('date') ===
+                  day.date.get('date')
               ) {
                 // Reference the shift by ID
                 day.shifts.push(shift.id);
+ 
+                if (carryOverShift != null) {
+                  day.carryOverShifts.push(carryOverShift);
+                  //carryOverShift = null;
+                }
+
+                if (shift.end_time.get('date') > day.date.get('date')) {
+                  carryOverShift = shift.id;
+                }
+
               }
+              console.log(carryOverShift)
             }
 
             employee.days.push(day);
@@ -145,7 +167,7 @@ class App extends Component {
     }
 
     // Set global timezone from config
-    Moment.globalTimezone = this.state.config.timezone;
+    const timezone = this.state.config.timezone;
     const currentTime = moment();
 
     // Highlight the current day
@@ -160,10 +182,8 @@ class App extends Component {
     const weekdayHeaders = this.state.thisWeek.map((day, index) => (
       <React.Fragment key={day}>
         <th className={checkIfToday(day)}>
-          <Moment format="ddd">{day}</Moment>{' '}
-          <small>
-            <Moment format="D MMM">{day}</Moment>
-          </small>
+          {day.tz(timezone).format('ddd')}
+          <small>{day.tz(timezone).format('D MMM')}</small>
         </th>
       </React.Fragment>
     ));
@@ -175,6 +195,7 @@ class App extends Component {
           employee={employee}
           shifts={this.state.shifts}
           roles={this.state.roles}
+          timezone={timezone}
         />
       </React.Fragment>
     ));
@@ -200,9 +221,11 @@ class App extends Component {
         <header className="roster-header">
           <h1>Roster for {this.state.config.location}</h1>
           <p>
-            All shifts are in <strong>{this.state.config.timezone.split('/')[1]}</strong> time ({
+            All shifts are in{' '}
+            <strong>{this.state.config.timezone.split('/')[1]}</strong> time ({
               this.state.config.timezone.split('/')[0]
-            } GMT<Moment format="Z">{currentTime}</Moment>)
+            }{' '}
+            GMT{currentTime.tz(timezone).format('Z')})
           </p>
         </header>
 
@@ -248,18 +271,17 @@ class App extends Component {
   }
 }
 
-const EmployeeRow = (props) => {
-  const { employee, shifts, roles } = props;
+const EmployeeRow = props => {
+  const { employee, shifts, roles, timezone } = props;
 
-  const employeeDays = employee.days.map((day, i) => (
-    <React.Fragment key={day.date + '-' + i}>
-      <EmployeeDay
-        day={day}
-        shifts={shifts}
-        roles={roles}
-      />
-    </React.Fragment>
-  ));
+  const employeeDays = employee.days.map((day, i) => {
+    //console.log(day.carryOverShifts)
+    return (
+      <React.Fragment key={day.date + '-' + i}>
+        <EmployeeDay day={day} shifts={shifts} roles={roles} timezone={timezone} />
+      </React.Fragment>
+    )
+  });
 
   return (
     <tr>
@@ -277,10 +299,10 @@ const EmployeeRow = (props) => {
       {employeeDays}
     </tr>
   );
-}
+};
 
-const EmployeeDay = (props) => {
-  const { day, shifts, roles } = props;
+const EmployeeDay = props => {
+  const { day, shifts, roles, timezone } = props;
 
   const shiftList = day.shifts.map((shiftId, i) => {
     const shift = shifts.filter(shift => {
@@ -314,13 +336,14 @@ const EmployeeDay = (props) => {
           shiftType={shiftType}
           style={style}
           role={role}
+          timezone={timezone}
         />
       </React.Fragment>
     );
   });
 
   return <td>{shiftList}</td>;
-}
+};
 
 class EmployeeShift extends React.Component {
   componentDidMount() {
@@ -333,7 +356,7 @@ class EmployeeShift extends React.Component {
   }
 
   render() {
-    const { shift, shiftType, style, role } = this.props;
+    const { shift, shiftType, style, role, timezone } = this.props;
 
     const startFormat = shiftType === 'prevDay' ? 'h:mma (ddd)' : 'h:mma';
     const endFormat = shiftType === 'nextDay' ? 'h:mma (ddd)' : 'h:mma';
@@ -346,13 +369,9 @@ class EmployeeShift extends React.Component {
         className={shiftType + ' role-' + role.id}
         onClick={() => this.handleClick(shift.id)}
       >
-        <Moment format={startFormat}>
-          {shift.start_time}
-        </Moment>
+        {shift.start_time.tz(timezone).format(startFormat)}
         -
-        <Moment format={endFormat}>
-          {shift.end_time}
-        </Moment>
+        {shift.end_time.tz(timezone).format(endFormat)}
       </a>
     );
   }
@@ -363,7 +382,7 @@ class EmployeeEditShift extends React.Component {
     super(props);
     this.state = {
       shiftIndex: 0
-    }
+    };
 
     this.changeStartTime = this.changeStartTime.bind(this);
     this.changeEndTime = this.changeEndTime.bind(this);
@@ -385,8 +404,17 @@ class EmployeeEditShift extends React.Component {
   changeEndTime(e) {
     const time = moment(e.target.value, 'hh:mm');
     let newShift = Object.assign({}, this.props.shifts[this.state.shiftIndex]);
+    /*
+    if (
+      time.get('hour') < newShift.start_time.get('hour') &&
+      newShift.start_time.get('date') == newShift.end_time.get('date')
+    ) {
+      newShift.end_time.add('day', 1);
+    } else {
+      newShift.end_time.set('date', newShift.start_time.get('date'))
+    }
+    */
     newShift.end_time.set({ h: time.get('hour'), m: time.get('minute') });
-
     this.handleChange(newShift);
   }
 
@@ -398,7 +426,7 @@ class EmployeeEditShift extends React.Component {
 
   // Trigger from EmployeeShift by Friendly fire
   onEmployeeShiftClick(id) {
-    const shiftIndex = this.props.shifts.findIndex( x => x.id === id)
+    const shiftIndex = this.props.shifts.findIndex(x => x.id === id);
     this.setState({ shiftIndex: shiftIndex });
   }
 
@@ -452,25 +480,31 @@ class EmployeeEditShift extends React.Component {
 
 // A second visualisation - show shifts by hours for each employee
 // TODO: select box to pick and change employee
-const EmployeeTimetable = (props) => {
+const EmployeeTimetable = props => {
   const { employee, shifts, roles, timezone } = props;
 
   const dayBlock = employee.days.map((day, index) => (
-    <div key={day.date}>
-      <h3>
-        <Moment format="ddd">{day.date}</Moment>
-      </h3>
+    <div key={day.date.tz(timezone)}>
+      <h3>{day.date.tz(timezone).format('ddd')}</h3>
       <ol>
-      <React.Fragment>
-        <EmployeeTimetableDay todayShifts={day.shifts} shifts={shifts} roles={roles} timezone={timezone} />
-      </React.Fragment>
+        <React.Fragment>
+          <EmployeeTimetableDay
+            todayShifts={day.shifts}
+            shifts={shifts}
+            roles={roles}
+            timezone={timezone}
+          />
+        </React.Fragment>
       </ol>
     </div>
   ));
 
   return (
     <div className="timetable">
-      <h2>Daily roster for <strong>{employee.first_name + ' ' + employee.last_name}</strong></h2>
+      <h2>
+        Daily roster for{' '}
+        <strong>{employee.first_name + ' ' + employee.last_name}</strong>
+      </h2>
       <div className="grid roster-timetable">
         <div>
           <h3>Time</h3>
@@ -502,17 +536,16 @@ const EmployeeTimetable = (props) => {
             <li>11pm - 12am</li>
           </ol>
         </div>
-        {dayBlock} 
+        {dayBlock}
       </div>
     </div>
   );
-}
+};
 
-const EmployeeTimetableDay = (props) => {
+const EmployeeTimetableDay = props => {
   const { todayShifts, shifts, roles, timezone } = props;
 
   const timeBlock = todayShifts.map((shiftId, i) => {
-
     const shift = shifts.filter(shift => {
       return shift.id === shiftId;
     })[0];
@@ -543,32 +576,24 @@ const EmployeeTimetableDay = (props) => {
     const style = {
       backgroundColor: role.background_colour,
       color: role.text_colour,
-      marginTop: (offset * 3) + 'em',
-      height: (duration * 3) + 'em',
+      marginTop: offset * 3 + 'em',
+      height: duration * 3 + 'em'
     };
 
     return (
       <React.Fragment key={shift.id}>
         <li style={style}>
           <div>
-            <Moment format={timeFormat}>
-            {startTime}
-          </Moment>{' '}
-          -{' '}
-          <Moment format={timeFormat}>
-            {endTime}
-          </Moment>
+            {startTime.format(timeFormat)}
+            -
+            {endTime.format(timeFormat)}
           </div>
-      </li>
+        </li>
       </React.Fragment>
     );
-  });    
+  });
 
-  return (
-    <React.Fragment>
-    {timeBlock}
-    </React.Fragment>
-  );
-}
+  return <React.Fragment>{timeBlock}</React.Fragment>;
+};
 
 export default App;
